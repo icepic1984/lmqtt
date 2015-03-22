@@ -2,7 +2,7 @@
 #define MQTT_CONNECTION_MANAGER_HPP
 
 #include <set>
-#incluce "mqtt_connection.hpp"
+#include "mqtt_connection.hpp"
 
 namespace lmqtt {
 
@@ -22,7 +22,7 @@ private:
 };
 }
 
-   
+#endif   
    
    
    

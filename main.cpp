@@ -1,11 +1,15 @@
 #include <iostream>
 #include <boost/asio.hpp>
+#include "mqtt_server.hpp"
 
 int main(int argc, char *argv[])
 {
-	boost::asio::io_service  io_service;
-	boost::asio::io_service::work work(io_service);
-	io_service.run();
-	std::cout << "test" << std::endl;
+	try {
+		lmqtt::mqtt_server server("0.0.0.0","12306");
+		server.run();
+	} catch(std::exception& e){
+		std::cerr<<"exception: "<<e.what() <<"\n";
+	}
+
 	return 0;
 }

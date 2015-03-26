@@ -18,18 +18,16 @@ mqtt_header_parser::result_type mqtt_header_parser::consume(mqtt_header& header,
 {
 	switch(state_) {
 	case type:
-		if((byte >> 4) == 15 &&  (byte >> 4 ) == 0){
-			BOOST_LOG_TRIVIAL(debug) << "Bad header received: type field invalid";
+		if(((byte >> 4) == 15) || ((byte >> 4 ) == 0)) {
 			return bad;
 		}
 		header.type = static_cast<mqtt_control_packet_type>(byte >>4);
-		header.flags = std::bitset<4>(byte & 0xF);
+		header.flags = std::bitset<4>(byte & 15);
 		header.remaining_length = 0;
 		state_ = length;
 		return indeterminate;
 	case length:
 		if(multiplier_ > (128 * 128 * 128)){
-			BOOST_LOG_TRIVIAL(debug) << "Bad header received: remaining_lengt invalid";
 			return bad;
 		}
 		header.remaining_length += (byte & 127) * multiplier_;

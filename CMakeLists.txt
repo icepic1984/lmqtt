@@ -4,7 +4,8 @@ project(mqtt)
 set (src main.cpp
 	mqtt_connection.cpp
 	mqtt_server.cpp
-	mqtt_connection_manager.cpp)
+	mqtt_connection_manager.cpp
+	mqtt_parser.cpp)
 find_package(Boost 1.50.0 REQUIRED COMPONENTS program_options log regex system)
 
 include_directories(${Boost_INCLUDE_DIRS})

@@ -13,6 +13,7 @@ void mqtt_connection_manager::start(mqtt_connection_ptr c)
 
 void mqtt_connection_manager::stop(mqtt_connection_ptr c)
 {
+	std::cout << "Stopped" << std::endl;
 	connections_.erase(c);
 	c->stop();
 }

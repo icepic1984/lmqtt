@@ -2,6 +2,7 @@
 #define MQTT_CONNECTION_HPP
 
 #include <memory>
+#include "mqtt_parser.hpp"
 #include <boost/asio.hpp>
 
 namespace lmqtt {
@@ -21,12 +22,17 @@ public:
 
 private:
    void read_mqtt_fixed_header();
-   void do_read();
+   void read_header();
+   void read_message();
    void do_write();
 
    boost::asio::ip::tcp::socket socket_;
    mqtt_connection_manager& manager_;
-   std::array<char,5> buffer_;
+   boost::asio::deadline_timer timer_;
+   std::array<char,1> buffer_header_;
+   std::vector<char> buffer_message_;
+   mqtt_header_parser parser_;
+   mqtt_header header_;
    
 };
 

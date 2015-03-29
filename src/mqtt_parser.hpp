@@ -50,7 +50,7 @@ std::string type_string(mqtt_control_packet_type type);
 struct mqtt_header 
 {
    mqtt_control_packet_type type;
-   std::bitset<4> flags;
+   uint8_t flags;
    uint32_t remaining_length;
 };
 	

@@ -22,7 +22,30 @@ mqtt_header_parser::result_type mqtt_header_parser::consume(mqtt_header& header,
 			return bad;
 		}
 		header.type = static_cast<mqtt_control_packet_type>(byte >>4);
-		header.flags = std::bitset<4>(byte & 15);
+		header.flags = (byte & 15);
+		switch(header.type) {
+		case mqtt_control_packet_type::connect:
+		case mqtt_control_packet_type::connack:
+		case mqtt_control_packet_type::puback:
+		case mqtt_control_packet_type::pubrec:
+		case mqtt_control_packet_type::pubcomp:
+		case mqtt_control_packet_type::suback:
+		case mqtt_control_packet_type::unsuback:
+		case mqtt_control_packet_type::pingreq:
+		case mqtt_control_packet_type::pingresp:
+		case mqtt_control_packet_type::disconnect:
+			if(header.flags != 0){
+				return bad;
+			}
+			break;
+		case mqtt_control_packet_type::pubrel:
+		case mqtt_control_packet_type::subscribe:
+		case mqtt_control_packet_type::unsubscribe:
+			if(header.flags  != 2) {
+			   return bad;
+			}
+			break;
+		}	
 		header.remaining_length = 0;
 		state_ = length;
 		return indeterminate;

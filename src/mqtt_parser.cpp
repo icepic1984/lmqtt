@@ -67,6 +67,11 @@ std::string type_string(mqtt_control_packet_type type) {
 	return mqtt_control_packet_type_strings[field-1];
 }
 
+bool verify_string(const std::string& name)
+{
+	return true;
+}
+
 }
 
 

@@ -158,9 +158,18 @@ result_type parse_buffer(InputIterator begin, InputIterator end, const mqtt_head
 	// MQTT-3.1.1 3.1.2.9: Verify user flag
 	if(!message.user_name_flag() && message.password_flag())
 	   return  result_type::bad;
-
 	// Data are encoded as big endian 
 	message.keep_alive = deserialize<uint16_t>(begin);
+	begin = begin + sizeof(message.keep_alive);
+	length = deserialize<uint16_t>(begin);
+	begin = begin + sizeof(length);
+	std::string id = deserialize<std::string>(begin,length);
+	std::cout << id << std::endl;
+	begin = begin + id.size();
+	length = deserialize<uint16_t>(begin);
+	begin = begin + sizeof(length);	
+	std::string user = deserialize<std::string>(begin,length);
+	std::cout << user << std::endl;
 	return result_type::good;
 }
 

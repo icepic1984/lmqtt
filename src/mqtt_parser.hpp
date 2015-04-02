@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <tuple>
 #include <boost/asio.hpp> 
+#include "mqtt_serialize.hpp"
 
 namespace lmqtt {
 
@@ -113,7 +114,7 @@ struct mqtt_connect_type
 	   return flags&32;
    }
    qos will_qos_flag() const {
-	   return static_cast<qos>(flags&24 >> 4);
+	   return static_cast<qos>((flags&24) >> 3);
    }
    bool will_flag() const {
 	   return flags&4;
@@ -121,13 +122,10 @@ struct mqtt_connect_type
    bool clean_session_flag() const {
 	   return flags&2;
    }
-   bool reserverd_flag() const {
+   bool reserved_flag() const {
 	   return flags&1;
    } 
 };
-
-template<typename T,typename InputIterator>
-result_type parse_buffer(const InputIterator begin, const InputIterator end, const mqtt_header& header, T& message);
 
 bool verify_string(const std::string& name);
 
@@ -136,21 +134,33 @@ result_type parse_buffer(InputIterator begin, InputIterator end, const mqtt_head
 {
 	if(distance(begin,end) < 10 ) return result_type::bad;
 	message.header = header;
+	uint16_t length = deserialize<uint16_t>(begin);
+	if(length != 4) return result_type::bad;
 	begin = begin + 2;
-	std::string name(4,' ');
-	for(unsigned i = 0; i < 4; ++i){
-		name[i] = *(begin++);
-	}
+	std::string name = deserialize<std::string>(begin,4);
 	if(!verify_string(name) || name != "MQTT")
 	   return result_type::bad;
+	begin = begin + 4;
 	message.protocol_name = name;
 	message.version = *(begin++);
 	message.flags = *(begin++);
-	if(message.reserverd_flag()) return result_type::bad;
+	// MQTT-3.1.1 3.1.2.3:  Verify reserved flag is zero
+	if(message.reserved_flag()) return result_type::bad;
+	// MQTT-3.1.1 3.1.2.6: Verify qos flag
+	if(static_cast<int>(message.will_qos_flag()) == 3){
+		return result_type::bad;
+	}
+	// MQTT-3.1.1 3.1.2.5: Verify will flag
+	if(!message.will_flag() &&
+	   (message.will_qos_flag() != qos::qos_0 || message.will_retain_flag())){
+	   return result_type::bad;
+	}
+	// MQTT-3.1.1 3.1.2.9: Verify user flag
 	if(!message.user_name_flag() && message.password_flag())
-	   return  result_type::bad;;
+	   return  result_type::bad;
+
 	// Data are encoded as big endian 
-	message.keep_alive = (*(begin+1) << 0 ) | *(begin) << 8;
+	message.keep_alive = deserialize<uint16_t>(begin);
 	return result_type::good;
 }
 

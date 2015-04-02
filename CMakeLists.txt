@@ -7,4 +7,5 @@ add_subdirectory(src)
 add_subdirectory(test)
 enable_testing()
 add_test (NAME TestParser COMMAND parser)
+add_test (NAME TestSerialize COMMAND serialize)
 

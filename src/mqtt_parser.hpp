@@ -4,6 +4,7 @@
 #include <iostream>
 #include <bitset>
 #include <iterator>
+#include <memory>
 #include <stdexcept>
 #include <tuple>
 #include <boost/asio.hpp> 
@@ -93,10 +94,14 @@ private:
    
 };
 
-
 enum class result_type {good,bad};
 	
-struct mqtt_connect_type
+struct mqtt_package_type
+{
+   virtual mqtt_control_packet_type get_type() const = 0;
+};
+
+struct mqtt_connect_type : mqtt_package_type
 {
    mqtt_header header;
    std::string protocol_name;
@@ -108,6 +113,10 @@ struct mqtt_connect_type
    std::vector<uint8_t> will_message;
    std::string username;
    std::string password;
+
+   mqtt_control_packet_type get_type() const {
+	   return header.type;
+   }
 
    bool username_flag() const {
 	   return flags&128;
@@ -132,7 +141,26 @@ struct mqtt_connect_type
    } 
 };
 
+struct mqtt_publish_type : mqtt_package_type 
+{};
+
+struct mqtt_subscribe_type : mqtt_package_type
+{};
+
 bool verify_string(const std::string& name);
+
+template<typename InputIterator>
+std::tuple<result_type,std::unique_ptr<mqtt_package_type>> parse_message(InputIterator begin, InputIterator end,
+	  const mqtt_header& header)
+{
+	switch(header.type) {
+	case mqtt_control_packet_type::connect:
+		mqtt_connect_type connect;
+		auto state = parse_buffer(begin,end,header,connect);
+		return(std::make_tuple(state,std::unique_ptr<mqtt_package_type>(
+			                       std::make_unique<mqtt_connect_type>(connect))));
+	}
+}
 
 template<typename InputIterator>
 result_type parse_buffer(InputIterator begin, InputIterator end, const mqtt_header& header, mqtt_connect_type& message)

@@ -46,9 +46,13 @@ void mqtt_connection::read_message()
 		                        if(!ec) {
 			                        BOOST_LOG_TRIVIAL(info) << "Message received: "
 			                                                 << bytes_transferred;
-			                        mqtt_connect_type message;
-			                        parse_buffer(buffer_message_.cbegin(), buffer_message_.cend(),header_,message);
-			                        
+
+			                        auto message = parse_message(buffer_message_.cbegin(), buffer_message_.cend(),header_);
+			                        if(std::get<0>(message) == result_type::good){
+				                        handler_.handle_request(*(std::get<1>(message)));
+			                        } else {
+				                        manager_.stop(shared_from_this()); 
+			                        }
 		                        } else if(ec == boost::asio::error::operation_aborted){
 			                        BOOST_LOG_TRIVIAL(debug) << "Async read aborted";
 			                        manager_.stop(shared_from_this());

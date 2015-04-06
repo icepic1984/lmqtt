@@ -10,7 +10,8 @@ mqtt_connection::mqtt_connection(boost::asio::ip::tcp::socket socket,
 	mqtt_connection_manager& manager)
 	: socket_(std::move(socket)),
 	  timer_(socket_.get_io_service(),boost::posix_time::seconds(10)),
-	  manager_(manager)
+	  manager_(manager),
+	  handler_(manager)
 {}
 
 void mqtt_connection::start() 
@@ -59,9 +60,7 @@ void mqtt_connection::read_header()
 {
 	auto self(shared_from_this());
 	boost::asio::async_read(socket_,boost::asio::buffer(buffer_header_),
-	                        [this,self](boost::system::error_code ec,
-	                                    std::size_t bytes_transferred)
-	                        {
+	                        [this,self](boost::system::error_code ec, std::size_t bytes_transferred) {
 		                        if(!ec) {
 			                        auto result = parser_.parse(header_,buffer_header_.begin(),
 			                                                    buffer_header_.end());

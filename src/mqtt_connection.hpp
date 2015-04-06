@@ -4,6 +4,7 @@
 #include <memory>
 #include "mqtt_parser.hpp"
 #include <boost/asio.hpp>
+#include "mqtt_request_handler.hpp"
 
 namespace lmqtt {
 
@@ -33,7 +34,7 @@ private:
    std::vector<char> buffer_message_;
    mqtt_header_parser parser_;
    mqtt_header header_;
-   
+   mqtt_request_handler handler_;
 };
 
 using mqtt_connection_ptr = std::shared_ptr<mqtt_connection>;

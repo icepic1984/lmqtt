@@ -24,14 +24,13 @@ void mqtt_server::run()
 
 void mqtt_server::do_accept()
 {
-	acceptor_.async_accept(socket_,[this](boost::system::error_code ec)
-	                       {
-		                       if(!ec){
-			                       manager_.start(std::make_shared<mqtt_connection>(
-				                                      std::move(socket_),manager_));
-		                       }
-		                       do_accept();
-	                       });
+	acceptor_.async_accept(socket_,[this](boost::system::error_code ec) {
+			if(!ec){
+				manager_.start(std::make_shared<mqtt_connection>(
+					               std::move(socket_),manager_));
+			}
+			do_accept();
+		});
 }
 
 }

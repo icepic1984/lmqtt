@@ -13,7 +13,6 @@ void mqtt_connection_manager::start(mqtt_connection_ptr c)
 
 void mqtt_connection_manager::stop(mqtt_connection_ptr c)
 {
-	std::cout << "Stopped" << std::endl;
 	connections_.erase(c);
 	c->stop();
 }
@@ -26,4 +25,11 @@ void mqtt_connection_manager::stop_all()
 	connections_.clear();
 }
 
+void mqtt_connection_manager::register_session(const std::string& id, mqtt_connection_ptr c)
+{
+	connections_.erase(c);
+	sessions_.insert(std::make_pair(id,c));
 }
+
+}
+

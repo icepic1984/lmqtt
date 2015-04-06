@@ -103,8 +103,13 @@ struct mqtt_connect_type
    uint8_t version;
    uint8_t flags;
    uint16_t keep_alive;
+   std::string client_id;
+   std::string will_topic;
+   std::vector<uint8_t> will_message;
+   std::string username;
+   std::string password;
 
-   bool user_name_flag() const {
+   bool username_flag() const {
 	   return flags&128;
    }
    bool password_flag() const {
@@ -132,48 +137,66 @@ bool verify_string(const std::string& name);
 template<typename InputIterator>
 result_type parse_buffer(InputIterator begin, InputIterator end, const mqtt_header& header, mqtt_connect_type& message)
 {
-	if(distance(begin,end) < 10 ) return result_type::bad;
-	message.header = header;
-	uint16_t length = deserialize<uint16_t>(begin);
-	if(length != 4) return result_type::bad;
-	begin = begin + 2;
-	std::string name = deserialize<std::string>(begin,4);
-	if(!verify_string(name) || name != "MQTT")
-	   return result_type::bad;
-	begin = begin + 4;
-	message.protocol_name = name;
-	message.version = *(begin++);
-	message.flags = *(begin++);
-	// MQTT-3.1.1 3.1.2.3:  Verify reserved flag is zero
-	if(message.reserved_flag()) return result_type::bad;
-	// MQTT-3.1.1 3.1.2.6: Verify qos flag
-	if(static_cast<int>(message.will_qos_flag()) == 3){
+	try{
+		message.header = header;
+		uint16_t length;
+		begin = deserialize(begin,end,length);
+		if(length != 4) return result_type::bad;
+		message.protocol_name = std::string(4,' ');
+		begin = deserialize(begin,end,message.protocol_name);
+		if(!verify_string(message.protocol_name) || message.protocol_name != "MQTT")
+		   return result_type::bad;
+		begin = deserialize(begin,end,message.version);
+		begin = deserialize(begin,end,message.flags);	
+		// MQTT-3.1.1 3.1.2.3:  Verify reserved flag is zero
+		if(message.reserved_flag()) return result_type::bad;
+		// MQTT-3.1.1 3.1.2.6: Verify qos flag
+		if(static_cast<int>(message.will_qos_flag()) == 3){
+			return result_type::bad;
+		}
+		// MQTT-3.1.1 3.1.2.5: Verify will flag
+		if(!message.will_flag() &&
+		   (message.will_qos_flag() != qos::qos_0 || message.will_retain_flag())){
+			return result_type::bad;
+		}
+		// MQTT-3.1.1 3.1.2.9: Verify user flag
+		if(!message.username_flag() && message.password_flag())
+		   return  result_type::bad;
+
+		// Data are encoded as big endian 
+		begin = deserialize(begin,end,message.keep_alive);
+		begin = deserialize(begin,end,length);
+		if(length == 0 && !message.clean_session_flag())
+		   return result_type::bad;
+		message.client_id = std::string(length,' ');
+		begin = deserialize(begin,end,message.client_id);
+		if(message.will_flag()){
+			begin = deserialize(begin,end,length);
+			message.will_topic = std::string(length,' ');
+			begin = deserialize(begin,end,message.will_topic);
+			begin = deserialize(begin,end,length);
+			message.will_message = std::vector<uint8_t>(length);
+			begin = deserialize(begin,end,message.will_message);
+		}
+		if(message.username_flag()){
+			begin = deserialize(begin,end,length);
+			message.username = std::string(length,' ');
+			begin = deserialize(begin,end,message.username);
+		}
+		if(message.password_flag()){
+			begin = deserialize(begin,end,length);
+			message.password = std::string(length,' ');
+			begin = deserialize(begin,end,message.password);
+		}
+		if(begin == end){
+			return result_type::good;
+		} else {
+			return result_type::bad;
+		}
+	}catch(const std::out_of_range& ex){
 		return result_type::bad;
 	}
-	// MQTT-3.1.1 3.1.2.5: Verify will flag
-	if(!message.will_flag() &&
-	   (message.will_qos_flag() != qos::qos_0 || message.will_retain_flag())){
-	   return result_type::bad;
-	}
-	// MQTT-3.1.1 3.1.2.9: Verify user flag
-	if(!message.user_name_flag() && message.password_flag())
-	   return  result_type::bad;
-	// Data are encoded as big endian 
-	message.keep_alive = deserialize<uint16_t>(begin);
-	begin = begin + sizeof(message.keep_alive);
-	length = deserialize<uint16_t>(begin);
-	begin = begin + sizeof(length);
-	std::string id = deserialize<std::string>(begin,length);
-	std::cout << id << std::endl;
-	begin = begin + id.size();
-	length = deserialize<uint16_t>(begin);
-	begin = begin + sizeof(length);	
-	std::string user = deserialize<std::string>(begin,length);
-	std::cout << user << std::endl;
-	return result_type::good;
 }
-
-
 }
 
 

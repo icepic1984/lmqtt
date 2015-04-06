@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(header_parser_message)
 	
 	// Test for wrong length field
 	uint16_t length = 3;
-	lmqtt::serialize(buffer.begin(),length);
+	lmqtt::serialize(buffer.begin(),buffer.end(),length);
 	BOOST_CHECK_EQUAL(
 		static_cast<int>(lmqtt::parse_buffer(buffer.begin(),
 		                                     buffer.end(), header,message)),
@@ -123,8 +123,8 @@ BOOST_AUTO_TEST_CASE(header_parser_message)
 	// Test for wrong protocol string 
 	length = 4;
 	std::string name("MQtt");
-	lmqtt::serialize(buffer.begin(),length);
-	lmqtt::serialize(buffer.begin()+sizeof(length),name);
+	auto begin = lmqtt::serialize(buffer.begin(),buffer.end(),length);
+	lmqtt::serialize(begin,buffer.end(),name);
 	BOOST_CHECK_EQUAL(
 		static_cast<int>(lmqtt::parse_buffer(buffer.begin(),
 		                                     buffer.end(), header,message)),
@@ -135,14 +135,10 @@ BOOST_AUTO_TEST_CASE(header_parser_message)
 	name = std::string("MQTT");
 	uint8_t protocol = 4;
 	uint8_t flags = 0b00000001;
-	auto iter = buffer.begin();
-	lmqtt::serialize(iter,length);
-	iter += sizeof(length);
-	lmqtt::serialize(iter,name);
-	iter += name.size();
-	lmqtt::serialize(iter,protocol);
-	iter += sizeof(protocol);
-	lmqtt::serialize(iter,flags);
+	begin = lmqtt::serialize(buffer.begin(),buffer.end(),length);
+	begin = lmqtt::serialize(begin,buffer.end(),name);
+	begin = lmqtt::serialize(begin,buffer.end(),protocol);
+	begin = lmqtt::serialize(begin,buffer.end(),flags);
 	BOOST_CHECK_EQUAL(
 		static_cast<int>(lmqtt::parse_buffer(buffer.begin(),
 		                                     buffer.end(), header,message)),
@@ -154,31 +150,10 @@ BOOST_AUTO_TEST_CASE(header_parser_message)
 	name = std::string("MQTT");
 	protocol = 4;
 	flags = 0b000001000;
-	iter = buffer.begin();
-	lmqtt::serialize(iter,length);
-	iter += sizeof(length);
-	lmqtt::serialize(iter,name);
-	iter += name.size();
-	lmqtt::serialize(iter,protocol);
-	iter += sizeof(protocol);
-	lmqtt::serialize(iter,flags);
-	BOOST_CHECK_EQUAL(
-		static_cast<int>(lmqtt::parse_buffer(buffer.begin(),
-		                                     buffer.end(), header,message)),
-		static_cast<int>(lmqtt::result_type::bad));
-	// Test password flags
-	length = 4;
-	name = std::string("MQTT");
-	protocol = 4;
-	flags = 0b010001000;
-	iter = buffer.begin();
-	lmqtt::serialize(iter,length);
-	iter += sizeof(length);
-	lmqtt::serialize(iter,name);
-	iter += name.size();
-	lmqtt::serialize(iter,protocol);
-	iter += sizeof(protocol);
-	lmqtt::serialize(iter,flags);
+	begin = lmqtt::serialize(buffer.begin(),buffer.end(),length);
+	begin = lmqtt::serialize(begin,buffer.end(),name);
+	begin = lmqtt::serialize(begin,buffer.end(),protocol);
+	begin = lmqtt::serialize(begin,buffer.end(),flags);
 	BOOST_CHECK_EQUAL(
 		static_cast<int>(lmqtt::parse_buffer(buffer.begin(),
 		                                     buffer.end(), header,message)),
@@ -188,21 +163,15 @@ BOOST_AUTO_TEST_CASE(header_parser_message)
 	length = 4;
 	name = std::string("MQTT");
 	protocol = 4;
-	flags = static_cast<uint8_t>(0b110001100);
-	uint16_t keep_alive = 12345;
-	iter = buffer.begin();
-	lmqtt::serialize(iter,length);
-	iter += sizeof(length);
-	lmqtt::serialize(iter,name);
-	iter += name.size();
-	lmqtt::serialize(iter,protocol);
-	iter += sizeof(protocol);
-	lmqtt::serialize(iter,flags);
-	iter += sizeof(flags);
-	lmqtt::serialize(iter,keep_alive);
+	flags = 0b010001000;
+	begin = lmqtt::serialize(buffer.begin(),buffer.end(),length);
+	begin = lmqtt::serialize(begin, buffer.end(),name);
+	begin = lmqtt::serialize(begin, buffer.end(),protocol);
+	begin = lmqtt::serialize(begin, buffer.end(),flags);
 	BOOST_CHECK_EQUAL(
 		static_cast<int>(lmqtt::parse_buffer(buffer.begin(),
 		                                     buffer.end(), header,message)),
-		static_cast<int>(lmqtt::result_type::good));
-	BOOST_CHECK_EQUAL(message.keep_alive,keep_alive);
+		static_cast<int>(lmqtt::result_type::bad));
+
+
 }

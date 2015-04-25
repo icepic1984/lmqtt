@@ -14,7 +14,7 @@ public:
    mqtt_request_handler& operator=(const mqtt_request_handler&) = delete;
 
    explicit mqtt_request_handler(mqtt_connection_manager& manager);
-   void handle_request(const mqtt_package_type& type);
+   void handle_request(mqtt_package_type *message);
 
 private:
    mqtt_connection_manager& manager_;

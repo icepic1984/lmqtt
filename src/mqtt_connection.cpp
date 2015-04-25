@@ -46,10 +46,9 @@ void mqtt_connection::read_message()
 		                        if(!ec) {
 			                        BOOST_LOG_TRIVIAL(info) << "Message received: "
 			                                                 << bytes_transferred;
-
 			                        auto message = parse_message(buffer_message_.cbegin(), buffer_message_.cend(),header_);
 			                        if(std::get<0>(message) == result_type::good){
-				                        handler_.handle_request(*(std::get<1>(message)));
+				                        handler_.handle_request(std::get<1>(message).get());
 			                        } else {
 				                        manager_.stop(shared_from_this()); 
 			                        }

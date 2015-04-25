@@ -99,11 +99,11 @@ enum class result_type {good,bad};
 struct mqtt_package_type
 {
    virtual mqtt_control_packet_type get_type() const = 0;
+   mqtt_header header;
 };
 
 struct mqtt_connect_type : mqtt_package_type
 {
-   mqtt_header header;
    std::string protocol_name;
    uint8_t version;
    uint8_t flags;
@@ -114,7 +114,7 @@ struct mqtt_connect_type : mqtt_package_type
    std::string username;
    std::string password;
 
-   mqtt_control_packet_type get_type() const {
+   mqtt_control_packet_type get_type() const override {
 	   return header.type;
    }
 
@@ -142,10 +142,62 @@ struct mqtt_connect_type : mqtt_package_type
 };
 
 struct mqtt_publish_type : mqtt_package_type 
-{};
+{
+   std::string topic_name;
+   uint16_t packet_id;
+   std::vector<uint8_t> payload;
+   
+   mqtt_control_packet_type get_type() const override {
+	   return header.type;
+   }
+};
+
+struct mqtt_puback_type : mqtt_package_type 
+{
+   uint16_t packet_id;
+   mqtt_control_packet_type get_type() const override {
+	   return header.type;
+   }
+};
+
+using topic_t = std::tuple<uint8_t,std::string>;
 
 struct mqtt_subscribe_type : mqtt_package_type
-{};
+{
+   
+   mqtt_control_packet_type get_type() const override {
+	   return header.type;
+   }
+   uint16_t packet_id;
+   std::vector<topic_t> topics;
+   
+};
+
+struct mqtt_unsubscribe_type : mqtt_package_type
+{
+   mqtt_control_packet_type get_type() const override {
+	   return header.type;
+   }
+   uint16_t packet_id;
+   std::vector<std::string> topics;
+};
+
+struct mqtt_pingreq_type : mqtt_package_type
+{
+   mqtt_control_packet_type get_type() const override {
+	   return header.type;
+   }
+   
+};
+
+struct mqtt_disconnect_type : mqtt_package_type
+{
+   mqtt_control_packet_type get_type() const override {
+	   return header.type;
+   }
+   
+};
+
 
 bool verify_string(const std::string& name);
 
@@ -155,15 +207,155 @@ std::tuple<result_type,std::unique_ptr<mqtt_package_type>> parse_message(InputIt
 {
 	switch(header.type) {
 	case mqtt_control_packet_type::connect:
-		mqtt_connect_type connect;
-		auto state = parse_buffer(begin,end,header,connect);
-		return(std::make_tuple(state,std::unique_ptr<mqtt_package_type>(
-			                       std::make_unique<mqtt_connect_type>(connect))));
-	}
+	   {
+		   mqtt_connect_type connect;
+		   auto state = parse_buffer(begin,end,header,connect);
+		   return(std::make_tuple(state,std::unique_ptr<mqtt_package_type>(
+			                          std::make_unique<mqtt_connect_type>(connect))));
+	   }
+	case mqtt_control_packet_type::publish:
+	   {
+		   mqtt_publish_type publish;
+		   auto state = parse_buffer(begin,end,header,publish);
+		   return(std::make_tuple(state,std::unique_ptr<mqtt_package_type>(
+			                         std::make_unique<mqtt_publish_type>(publish))));
+	   } 
+	case mqtt_control_packet_type::puback:
+	   {
+		   mqtt_puback_type puback;
+		   auto state = parse_buffer(begin,end,header,puback);
+		   return(std::make_tuple(state,std::unique_ptr<mqtt_package_type>(
+			                         std::make_unique<mqtt_puback_type>(puback))));
+	   } 
+	case mqtt_control_packet_type::subscribe:
+	   {
+		   mqtt_subscribe_type subscribe;
+		   auto state = parse_buffer(begin,end,header,subscribe);
+		   return(std::make_tuple(state,std::unique_ptr<mqtt_package_type>(
+			                         std::make_unique<mqtt_subscribe_type>(subscribe))));
+	   } 
+	case mqtt_control_packet_type::unsubscribe:
+	   {
+		   mqtt_unsubscribe_type unsubscribe;
+		   auto state = parse_buffer(begin,end,header,unsubscribe);
+		   return(std::make_tuple(state,std::unique_ptr<mqtt_package_type>(
+			                          std::make_unique<mqtt_unsubscribe_type>(unsubscribe))));
+	   } 
+	case mqtt_control_packet_type::pingreq:
+	   {
+		   mqtt_pingreq_type ping;
+		   return(std::make_tuple(result_type::good,
+		                          std::unique_ptr<mqtt_package_type>(
+			                          std::make_unique<mqtt_pingreq_type>(ping))));
+	   }
+	case mqtt_control_packet_type::disconnect:
+	   {
+		   mqtt_disconnect_type disconnect;
+		   return(std::make_tuple(result_type::good,
+		                          std::unique_ptr<mqtt_package_type>(
+			                          std::make_unique<mqtt_disconnect_type>(disconnect))));
+	   }
+	default:
+		return(std::make_tuple(result_type::bad,nullptr));
+	} 
 }
 
 template<typename InputIterator>
-result_type parse_buffer(InputIterator begin, InputIterator end, const mqtt_header& header, mqtt_connect_type& message)
+result_type parse_buffer(InputIterator begin, InputIterator end,
+                         const mqtt_header& header, mqtt_unsubscribe_type& message)
+{
+	try{
+		message.header = header;
+		begin = deserialize(begin,end,message.packet_id);
+		while(begin != end) {
+			uint16_t length;
+			begin = deserialize(begin,end,length);
+			std::string topic(' ',length);
+			begin = deserialize(begin,end,topic);
+		}
+		return result_type::good;
+	} catch(const std::out_of_range& ex){
+		return result_type::bad;
+	}
+		
+}
+
+template<typename InputIterator>
+result_type parse_buffer(InputIterator begin, InputIterator end,
+                         const mqtt_header& header, mqtt_subscribe_type& message)
+{
+	try{
+		message.header = header;
+		begin = deserialize(begin,end,message.packet_id);
+		while(begin != end) {
+			uint16_t length;
+			begin = deserialize(begin,end,length);
+			std::string topic(' ',length);
+			begin = deserialize(begin,end,topic);
+			uint8_t qos;
+			begin = deserialize(begin,end,qos);
+			message.topics.emplace_back(qos,topic);
+		}
+		return result_type::good;
+	} catch(const std::out_of_range& ex){
+		return result_type::bad;
+	}
+		
+}
+
+template<typename InputIterator>
+result_type parse_buffer(InputIterator begin, InputIterator end,
+                         const mqtt_header& header, mqtt_puback_type& message)
+{
+	try{
+		message.header = header;
+		begin = deserialize(begin,end,message.packet_id);
+		if(begin == end){
+			return result_type::good;
+		} else {
+			return result_type::bad;
+		}
+	} catch(const std::out_of_range& ex){
+		return result_type::bad;
+	}
+		
+}
+
+template<typename InputIterator>
+result_type parse_buffer(InputIterator begin, InputIterator end,
+                         const mqtt_header& header, mqtt_publish_type& message)
+{
+
+	try{
+		message.header = header;
+		uint16_t length;
+		begin = deserialize(begin,end,length);
+		message.topic_name = std::string(' ',length);
+		begin = deserialize(begin,end,message.topic_name);
+		begin = deserialize(begin,end,message.packet_id);
+		std::size_t length_var_header = length + sizeof(length) * 2;
+		std::size_t length_payload = message.header.remaining_length -
+		   length_var_header;
+		if(length_payload > 0){
+			message.payload = std::vector<uint8_t>(length_payload);
+			begin = deserialize(begin,end,message.payload);
+		} else if (length_payload < 0) {
+			return result_type::bad;
+		}
+		if(begin == end){
+			return result_type::good;
+		} else {
+			return result_type::bad;
+		}
+	} catch(const std::out_of_range& ex){
+		return result_type::bad;
+	}
+		
+}
+	
+template<typename InputIterator>
+result_type parse_buffer(InputIterator begin, InputIterator end,
+                         const mqtt_header& header, mqtt_connect_type& message)
 {
 	try{
 		message.header = header;

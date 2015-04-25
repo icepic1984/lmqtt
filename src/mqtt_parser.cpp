@@ -72,6 +72,18 @@ bool verify_string(const std::string& name)
 	return true;
 }
 
+std::vector<uint8_t> calculate_remaining_bytes(uint32_t length) 
+{
+	std::vector<uint8_t> bytes;
+	do {
+		uint8_t byte = static_cast<uint8_t>(length % 128);
+		length = length /  128;
+		if(length > 0){
+			byte = byte | 128;
+		}
+		bytes.push_back(byte);
+	} while(length > 0);
+	return bytes;
 }
 
-
+}

@@ -8,5 +8,7 @@ include_directories(${Boost_INCLUDE_DIRS}
 add_definitions (-DBOOST_TEST_DYN_LINK)
 add_executable(parser parser.cpp)
 add_executable(serialize serialize.cpp)
+add_executable(helper helper.cpp)
 target_link_libraries(parser libmqtt ${Boost_LIBRARIES} pthread) 
 target_link_libraries(serialize libmqtt ${Boost_LIBRARIES} pthread) 
+target_link_libraries(helper libmqtt ${Boost_LIBRARIES} pthread) 

@@ -12,6 +12,8 @@
 
 namespace lmqtt {
 
+std::vector<uint8_t> calculate_remaining_bytes(uint32_t length);
+
 enum class mqtt_control_packet_type 
 {
    connect = 1,
@@ -65,6 +67,12 @@ struct mqtt_header
    }
    bool dup_flag() const {
 	   return flags&8;
+   }
+   std::vector<uint8_t> serialize() const {
+	   std::vector<uint8_t> buffer(2);
+	   uint8_t cpt = static_cast<uint16_t>(type);
+	   cpt = cpt << 4;
+	   cpt = cpt | flags;
    }
 };
 	
@@ -197,8 +205,18 @@ struct mqtt_disconnect_type : mqtt_package_type
    }
    
 };
-
-
+struct mqtt_connack_type : mqtt_package_type 
+{
+    mqtt_control_packet_type get_type() const override {
+	   return header.type;
+    }
+   std::vector<uint8_t> serialize() const {
+	   std::vector<uint8_t> tmp = header.serialize();
+   } 
+   uint8_t ack_flag;
+   uint8_t return_code;
+};
+   
 bool verify_string(const std::string& name);
 
 template<typename InputIterator>
@@ -417,8 +435,8 @@ result_type parse_buffer(InputIterator begin, InputIterator end,
 		return result_type::bad;
 	}
 }
-}
 
+}
 
 #endif
    

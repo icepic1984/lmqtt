@@ -52,7 +52,7 @@ void mqtt_connection::read_message()
 			                        } else {
 				                        manager_.stop(shared_from_this()); 
 			                        }
-		                        } else if(ec == boost::asio::error::operation_aborted){
+		                        } else if(ec != boost::asio::error::operation_aborted){
 			                        BOOST_LOG_TRIVIAL(debug) << "Async read aborted";
 			                        manager_.stop(shared_from_this());
 		                        }
@@ -82,7 +82,7 @@ void mqtt_connection::read_header()
 			                        } else {
 				                        read_header();
 			                        }
-		                        } else if(ec == boost::asio::error::operation_aborted){
+		                        } else if(ec != boost::asio::error::operation_aborted){
 			                        BOOST_LOG_TRIVIAL(debug) << "Async read aborted";
 			                        manager_.stop(shared_from_this());
 		                        }
@@ -90,7 +90,19 @@ void mqtt_connection::read_header()
 }
 
 void mqtt_connection::do_write()
-{std::cout << "Write" << std::endl;}
+{
+	BOOST_LOG_TRIVIAL(info) << "Write data";
+	auto self(shared_from_this());
+	boost::asio::async_write(socket_,boost::asio::buffer(handler_.get_buffer()),
+	                         [this,self](boost::system::error_code ec, std::size_t) {
+		                         if(!ec){
+			                         read_header();
+		                         }
+		                         if( ec != boost::asio::error::operation_aborted){
+			                         BOOST_LOG_TRIVIAL(debug) << "Async read aborted";
+			                         manager_.stop(shared_from_this());
+		                         }});
+}
 
 void log_remote_ip(const boost::asio::ip::tcp::socket& socket)
 {

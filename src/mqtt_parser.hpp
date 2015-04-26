@@ -32,6 +32,16 @@ enum class mqtt_control_packet_type
    disconnect
 };
 
+enum class mqtt_return_code 
+{
+   accepted = 0,
+   refused_protocol,
+   refused_identifier,
+   refused_unavailable,
+   refused_login,
+   refused_auth
+};
+
 static const std::array<std::string,static_cast<int>(mqtt_control_packet_type::disconnect)>
 	mqtt_control_packet_type_strings{
 	"connect",
@@ -69,11 +79,16 @@ struct mqtt_header
 	   return flags&8;
    }
    std::vector<uint8_t> serialize() const {
-	   std::vector<uint8_t> buffer(2);
-	   uint8_t cpt = static_cast<uint16_t>(type);
+	   auto tmp = calculate_remaining_bytes(remaining_length);
+	   std::vector<uint8_t> buffer;
+	   uint8_t cpt = static_cast<uint8_t>(type);
 	   cpt = cpt << 4;
 	   cpt = cpt | flags;
+	   buffer.push_back(cpt);
+	   buffer.insert(buffer.end(),tmp.begin(),tmp.end());
+	   return buffer;
    }
+
 };
 	
 class mqtt_header_parser
@@ -207,14 +222,18 @@ struct mqtt_disconnect_type : mqtt_package_type
 };
 struct mqtt_connack_type : mqtt_package_type 
 {
-    mqtt_control_packet_type get_type() const override {
+   mqtt_control_packet_type get_type() const override {
 	   return header.type;
-    }
+   }
+
    std::vector<uint8_t> serialize() const {
-	   std::vector<uint8_t> tmp = header.serialize();
+	   std::vector<uint8_t> buffer = header.serialize();
+	   buffer.push_back(ack_flag);
+	   buffer.push_back(static_cast<uint8_t>(return_code));
+	   return buffer;
    } 
    uint8_t ack_flag;
-   uint8_t return_code;
+   mqtt_return_code return_code;
 };
    
 bool verify_string(const std::string& name);
@@ -308,7 +327,7 @@ result_type parse_buffer(InputIterator begin, InputIterator end,
 		while(begin != end) {
 			uint16_t length;
 			begin = deserialize(begin,end,length);
-			std::string topic(' ',length);
+			std::string topic(length,' ');
 			begin = deserialize(begin,end,topic);
 			uint8_t qos;
 			begin = deserialize(begin,end,qos);
@@ -336,19 +355,17 @@ result_type parse_buffer(InputIterator begin, InputIterator end,
 	} catch(const std::out_of_range& ex){
 		return result_type::bad;
 	}
-		
 }
 
 template<typename InputIterator>
 result_type parse_buffer(InputIterator begin, InputIterator end,
                          const mqtt_header& header, mqtt_publish_type& message)
 {
-
 	try{
 		message.header = header;
 		uint16_t length;
 		begin = deserialize(begin,end,length);
-		message.topic_name = std::string(' ',length);
+		message.topic_name = std::string(length,' ');
 		begin = deserialize(begin,end,message.topic_name);
 		begin = deserialize(begin,end,message.packet_id);
 		std::size_t length_var_header = length + sizeof(length) * 2;
@@ -371,6 +388,29 @@ result_type parse_buffer(InputIterator begin, InputIterator end,
 		
 }
 	
+template<typename InputIterator>
+result_type parse_buffer(InputIterator begin, InputIterator end,
+                         const mqtt_header& header, mqtt_connack_type& message)
+{
+	try{
+		message.header = header;
+		begin = deserialize(begin,end,message.ack_flag);
+		if(message.ack_flag > 1) return result_type::bad;
+		uint8_t return_code = 0;
+		begin = deserialize(begin,end,return_code);
+		if(return_code > static_cast<uint8_t>(mqtt_return_code::refused_auth))
+		   return result_type::bad;
+		message.return_code = static_cast<mqtt_return_code>(return_code);
+		if(begin == end){
+			return result_type::good;
+		} else {
+			return result_type::bad;
+		}
+	} catch(const std::out_of_range& ex){
+		return result_type::bad;
+	}
+}
+
 template<typename InputIterator>
 result_type parse_buffer(InputIterator begin, InputIterator end,
                          const mqtt_header& header, mqtt_connect_type& message)
@@ -442,3 +482,4 @@ result_type parse_buffer(InputIterator begin, InputIterator end,
    
    
    
+

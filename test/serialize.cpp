@@ -48,6 +48,47 @@ BOOST_AUTO_TEST_CASE(serialize_test)
 	                  std::out_of_range);
 	BOOST_CHECK_THROW(lmqtt::serialize(buffer.begin(),buffer.end(),test_str),
 	                  std::out_of_range);
+}
 
+BOOST_AUTO_TEST_CASE(serialize_header) 
+{
+	lmqtt::mqtt_header header;
+	lmqtt::mqtt_header result;
+	
+	header.type = lmqtt::mqtt_control_packet_type::connack;
+	header.flags = 0;
+	header.remaining_length = 321;
+
+	auto buffer = header.serialize();
+
+	lmqtt::mqtt_header_parser parser;
+	auto state = parser.parse(result,buffer.begin(),buffer.end());
+	BOOST_CHECK_EQUAL(std::get<0>(state),
+	                  lmqtt::mqtt_header_parser::good);
+	BOOST_CHECK_EQUAL(static_cast<uint8_t>(result.type),
+	                  static_cast<uint8_t>(header.type));
+	BOOST_CHECK_EQUAL(result.flags, header.flags);
+	BOOST_CHECK_EQUAL(result.remaining_length, header.remaining_length);
+}
+
+BOOST_AUTO_TEST_CASE(serialize_connack) 
+{
+	lmqtt::mqtt_connack_type connack;
+	lmqtt::mqtt_connack_type result;
+	lmqtt::mqtt_header header;
+	
+	header.type = lmqtt::mqtt_control_packet_type::connack;
+	header.flags = 0;
+	header.remaining_length = 2;
+	connack.ack_flag = 0;
+	connack.return_code = lmqtt::mqtt_return_code::accepted;
+	auto buffer = connack.serialize();
+	auto state = parse_buffer(buffer.end()-header.remaining_length,
+	                          buffer.end(), header, result);
+	BOOST_CHECK_EQUAL(static_cast<int>(state),
+	                  static_cast<int>(lmqtt::result_type::good));
+	BOOST_CHECK_EQUAL(connack.ack_flag, result.ack_flag);
+	BOOST_CHECK_EQUAL(static_cast<int>(connack.return_code),
+	                  static_cast<int>(result.return_code));
 }
 

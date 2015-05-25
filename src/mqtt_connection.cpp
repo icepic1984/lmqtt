@@ -44,21 +44,27 @@ void mqtt_connection::read_message()
 	                        [this,self](boost::system::error_code ec,
 	                                    std::size_t bytes_transferred) {
 		                        if(!ec) {
-			                        BOOST_LOG_TRIVIAL(info) << "Message received: "
-			                                                 << bytes_transferred;
+			                        BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<< " --> Message received: "
+			                                                << bytes_transferred;
 			                        auto message = parse_message(buffer_message_.cbegin(), buffer_message_.cend(),header_);
 			                        if(std::get<0>(message) == result_type::good){
 				                        auto action  = handler_.handle_request(std::get<1>(message).get());
 				                        switch(action) {
 				                        case mqtt_request_action::response:
+					                        BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<< " --> Send reponse!";
 					                        do_write();
 					                        break;
+				                        case mqtt_request_action::next:
+					                        BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<< " --> Read next package!";
+					                        read_header();
+					                        break;
 				                        case mqtt_request_action::disconnect:
+					                        BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<< " --> Disconnect!";
 					                        manager_.stop(shared_from_this()); 
 					                        break;
 				                        }
 			                        } else {
-				                        BOOST_LOG_TRIVIAL(debug) << "Received bad data.";
+				                        BOOST_LOG_TRIVIAL(debug) << __PRETTY_FUNCTION__<< " --> Received bad data.";
 				                        manager_.stop(shared_from_this()); 
 			                        }
 		                        }
@@ -74,17 +80,17 @@ void mqtt_connection::read_header()
 			                        auto result = parser_.parse(header_,buffer_header_.begin(),
 			                                                    buffer_header_.end());
 			                        if(std::get<0>(result) == mqtt_header_parser::good) {
-				                        BOOST_LOG_TRIVIAL(info) << "Received header ";
-				                        BOOST_LOG_TRIVIAL(info) << "Type: "
+				                        BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<<" --> Received header ";
+				                        BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<<" --> Type: "
 				                                                << type_string(header_.type); 
-				                        BOOST_LOG_TRIVIAL(info) << "Message length: "
+				                        BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<<" --> Message length: "
 				                                                << header_.remaining_length;
 				                        buffer_message_.resize(header_.remaining_length);
-				                        timer_.cancel();
+				                        //timer_.cancel();
 				                        parser_.reset();
 				                        read_message();
 			                        } else if (std::get<0>(result) == mqtt_header_parser::bad) {
-				                        BOOST_LOG_TRIVIAL(debug) << "Bad header received";
+				                        BOOST_LOG_TRIVIAL(debug) << __PRETTY_FUNCTION__<<" --> Bad header received";
 				                        manager_.stop(shared_from_this());
 			                        } else {
 				                        read_header();
@@ -95,7 +101,7 @@ void mqtt_connection::read_header()
 
 void mqtt_connection::do_write()
 {
-	BOOST_LOG_TRIVIAL(info) << "Write data";
+	BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<< " --> Write data";
 	auto self(shared_from_this());
 	boost::asio::async_write(socket_,boost::asio::buffer(handler_.get_buffer()),
 	                         [this,self](boost::system::error_code ec, std::size_t) {
@@ -109,7 +115,7 @@ void log_remote_ip(const boost::asio::ip::tcp::socket& socket)
 {
 	auto remote_endp = socket.remote_endpoint();
 	auto remote_address = remote_endp.address().to_string();
-	BOOST_LOG_TRIVIAL(info) << "New Connection: "<<remote_address;
+	BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<<" --> New Connection: "<<remote_address;
 }
 
 }

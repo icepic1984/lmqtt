@@ -281,6 +281,7 @@ std::tuple<result_type,std::unique_ptr<mqtt_package_type>> parse_message(InputIt
 	case mqtt_control_packet_type::pingreq:
 	   {
 		   mqtt_pingreq_type ping;
+		   ping.header = header;
 		   return(std::make_tuple(result_type::good,
 		                          std::unique_ptr<mqtt_package_type>(
 			                          std::make_unique<mqtt_pingreq_type>(ping))));
@@ -288,6 +289,7 @@ std::tuple<result_type,std::unique_ptr<mqtt_package_type>> parse_message(InputIt
 	case mqtt_control_packet_type::disconnect:
 	   {
 		   mqtt_disconnect_type disconnect;
+		   disconnect.header = header;
 		   return(std::make_tuple(result_type::good,
 		                          std::unique_ptr<mqtt_package_type>(
 			                          std::make_unique<mqtt_disconnect_type>(disconnect))));

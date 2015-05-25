@@ -14,12 +14,11 @@ mqtt_request_action mqtt_request_handler::handle_request(mqtt_package_type *mess
 	switch(message->get_type()){
 	case mqtt_control_packet_type::connect:
 	   {
-		   
 		   mqtt_connect_type *connect =
 		      dynamic_cast<mqtt_connect_type*>(message);
-		   BOOST_LOG_TRIVIAL(info) << "Connect Message:"
+		   BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<< " --> Connect Message:"
 		                           << connect->keep_alive;
-		   BOOST_LOG_TRIVIAL(info) << "Connect Message: "
+		   BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<< " --> Connect Message: "
 		                           << connect->username;
 		   mqtt_connack_type connack;
 		   mqtt_header header;
@@ -36,8 +35,13 @@ mqtt_request_action mqtt_request_handler::handle_request(mqtt_package_type *mess
 	   {
 		   mqtt_publish_type *publish =
 		      dynamic_cast<mqtt_publish_type*>(message);
-		   BOOST_LOG_TRIVIAL(info) << "Publish Message: " <<
+		   BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<<" --> Publish Message: " <<
 		      (*publish).topic_name;
+		   return mqtt_request_action::next;
+	   }
+	case mqtt_control_packet_type::disconnect:
+	   {
+		   return mqtt_request_action::disconnect;
 	   }
 	}
 }

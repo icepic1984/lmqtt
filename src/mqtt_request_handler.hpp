@@ -9,7 +9,7 @@ namespace lmqtt {
 class mqtt_connection_manager;
 class mqtt_package_type;
 
-enum class mqtt_request_action {nothing, disconnect, response};
+enum class mqtt_request_action {next, disconnect, response};
    
 class mqtt_request_handler
 {

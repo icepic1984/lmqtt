@@ -118,4 +118,5 @@ void log_remote_ip(const boost::asio::ip::tcp::socket& socket)
 	BOOST_LOG_TRIVIAL(info) << __PRETTY_FUNCTION__<<" --> New Connection: "<<remote_address;
 }
 
+
 }

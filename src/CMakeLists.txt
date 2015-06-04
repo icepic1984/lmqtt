@@ -3,7 +3,8 @@ set (src
 	mqtt_server.cpp
 	mqtt_connection_manager.cpp
 	mqtt_parser.cpp
-	mqtt_request_handler.cpp)
+	mqtt_request_handler.cpp
+	mqtt_broker.cpp)
 
 find_package(Boost 1.50.0 REQUIRED COMPONENTS program_options log regex system)
 
